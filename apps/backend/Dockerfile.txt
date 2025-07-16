@@ -1,0 +1,57 @@
+# apps/backend/Dockerfile
+
+# Paso 1: Etapa de Construcción (construimos la aplicación)
+# Usamos una imagen de Node.js ligera para la construcción.
+# 'AS build' le da un nombre a esta etapa para referenciarla después.
+FROM node:20-alpine AS build
+
+# Establecemos el directorio de trabajo dentro de esta "caja".
+WORKDIR /app
+
+# Copiamos solo los archivos de configuración de dependencias (package.json y yarn.lock).
+# Esto permite a Docker ser inteligente y no reinstalar dependencias si no han cambiado.
+COPY package.json ./
+COPY yarn.lock ./
+
+# Instalamos las dependencias de producción (lo que la app necesita para funcionar, no para desarrollarse).
+# Mercur usa Yarn, así que usamos 'yarn install'.
+RUN yarn install --production
+
+# Copiamos el resto del código del backend de Mercur.
+COPY . .
+
+# Mercur necesita compilar su código (de TypeScript a JavaScript).
+# 'yarn build' hace este trabajo.
+RUN yarn build
+
+# ---
+
+# Paso 2: Etapa Final (creamos una imagen limpia y pequeña para ejecutar la aplicación)
+# Usamos otra imagen Node.js ligera. Esta será la imagen final que correrá.
+# Es más pequeña porque no incluye las herramientas de construcción o la caché de Yarn.
+FROM node:20-alpine
+
+# Establecemos el directorio de trabajo en esta nueva "caja".
+WORKDIR /app
+
+# Copiamos solo los archivos esenciales de la etapa de construcción anterior ('build').
+# Copiamos la versión ya compilada ('dist'), las dependencias instaladas,
+# y archivos de configuración importantes como 'package.json' y 'ormconfig.js'.
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/yarn.lock ./yarn.lock
+# El archivo ormconfig.js es importante para la conexión a la base de datos de Medusa.
+COPY --from=build /app/ormconfig.js ./ormconfig.js
+
+# Declaramos que este contenedor va a "escuchar" en el puerto 9000.
+# Es como decir: "¡Atención! Puedes contactarme en el puerto 9000."
+EXPOSE 9000
+
+# Definimos una variable de entorno por defecto para el puerto.
+# Esto es opcional, ya que Docker Compose puede sobrescribirla.
+ENV PORT=9000
+
+# El comando que se ejecutará cuando la "caja" se inicie.
+# 'node dist/main.js' es el punto de entrada principal para el backend de Medusa/Mercur.
+CMD ["node", "dist/main.js"]

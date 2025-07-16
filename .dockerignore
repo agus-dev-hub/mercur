@@ -1,0 +1,26 @@
+# .dockerignore en la raíz de tu proyecto Mercur
+
+# Ignora el sistema de control de versiones de Git
+.git
+.gitignore
+
+# Ignora las carpetas de dependencias de Node.js.
+# Turborepo las gestionará dentro del contenedor.
+node_modules
+apps/*/node_modules
+
+# Ignora las carpetas de salida de la construcción
+# Serán generadas dentro del contenedor.
+dist
+
+# Ignora archivos de configuración de entorno
+# Los pasaremos con Docker Compose.
+.env
+
+# Archivos de sistema de Mac
+.DS_Store
+
+# Logs de depuración de NPM/Yarn
+npm-debug.log
+yarn-debug.log
+yarn-error.log

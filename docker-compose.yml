@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: always
+    ports:
+      - "9000:9000"
+    environment:
+      PORT: 9000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey}
+      COOKIE_SECRET: ${COOKIE_SECRET:-supersecretcookiekey}
+      STORE_CORS: ${STORE_CORS:-http://localhost:8000,http://localhost:3000,http://localhost:7000}
+      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:7000,http://localhost:7001}
+      MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://localhost:9000}
+    depends_on:
+      redis:
+        condition: service_started
+
+volumes:
+  redis-data:
